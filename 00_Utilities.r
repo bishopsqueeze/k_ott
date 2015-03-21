@@ -5,6 +5,7 @@
 ##------------------------------------------------------------------
 ## Load libraries
 ##------------------------------------------------------------------
+library(compiler)
 
 ##------------------------------------------------------------------
 ## Set the working directory
@@ -30,43 +31,85 @@ unifSub     <- (1/9) + testSub
 all2Sub     <- testSub
 all2Sub[,2] <- 1
 
-floorSub    <- function(mySub)
+
+
+floorMatrix <- function(myPred, eps=1e-10)
 {
-    if ( class(mySub) == "matrix" ) {
-        return(pmax(pmin(mySub, (1 - 1e-15)), 1e-15))
-    } else {
-        stop("floorSub:: Submission file not a matrix")
-    }
+    return(pmax(pmin(myPred, 1-eps), eps))
 }
-a <- floorSub(unifSub)
+##a <- floorSub(unifSub)
+floorMatrix.cmp <- cmpfun(floorMatrix)
 
 
 expandTarget <- function(myTarget)
 {
-    if (class(myTarget) == "factor") {
-        myTarget   <- as.integer(myTarget)
-    }
+    nr          <- length(myTarget)
+    tmpTarget   <- as.numeric(gsub("L", "", myTarget))
+    expTarget   <- matrix(0, nrow=nr, ncol=9, dimnames=list(NULL, c(paste0("L",1:9))))
     
-    nr  <- length(myTarget)
-    nc  <- 9
-    
-    expTarget   <- matrix(0, nrow=nr, ncol=nc, dimnames=list(NULL, c(paste0("Class_",1:nc))))
-    
-    expTarget[cbind(1:nr,myTarget)] <- 1
+    expTarget[cbind(1:nr, tmpTarget)] <- 1
     
     return(expTarget)
 }
-b <- expandTarget(testTarget)
+expandTarget.cmp <- cmpfun(expandTarget)
+##b <- expandTarget(testTarget)
 
 
 
 ##------------------------------------------------------------------
 ## <function> evalMetric
 ##------------------------------------------------------------------
-evalMetric <- function(mySub, myTarget)
+evalMetric <- function(myPred, myTarget)
 {
-    return(-(1/nrow(mySub))*sum(expandTarget(myTarget)*log(floorSub(mySub))))
+        nc  <- 9
+
+    if (class(myPred) %in% c("matrix", "data.frame")) {
+    
+        nr          <- nrow(myPred)
+        tmpTarget   <- as.numeric(gsub("L", "", myTarget))
+        tmpPred     <- as.matrix(myPred)
+        
+        return(-sum(expandTarget.cmp(tmpTarget)*log(floorMatrix.cmp(tmpPred)))/nr)
+    
+    
+    } else if (class(myPred) == "factor") {
+        
+        nr          <- length(myPred)
+        tmpTarget   <- as.numeric(gsub("L", "", myTarget))
+        tmpPred     <- as.numeric(gsub("L", "", myPred))
+        
+        return(-sum(expandTarget.cmp(tmpTarget)*log(floorMatrix.cmp(expandTarget.cmp(tmpPred))))/nr)
+        
+    } else {
+        return(-999)
+    }
+    
 }
+
+
+logLoss <- function(data, lev = NULL, model = NULL)
+{
+    eps         <- 1e-10
+    nr          <- nrow(data)
+    
+    tmpObs      <- as.integer(gsub("L", "", data[,c("obs")]))
+    tmpProbs    <- data[,c(paste0("L",1:9))]
+    
+    tmpProbs[tmpProbs < eps]     <- eps
+    tmpProbs[tmpProbs > 1 - eps] <- 1 - eps
+    
+    matObs                      <- matrix(0, nrow=nr, ncol=9, dimnames=list(NULL, c(paste0("L",1:9))))
+    matObs[cbind(1:nr, tmpObs)] <- 1
+    
+    ll          <- sum(matObs*tmpProbs)/nr
+    nll         <- -ll
+    out         <- c(ll, nll)
+    names(out)  <- c("logloss", "neglogloss")
+    out
+}
+
+
+
 
 tmp1 <- evalMetric(unifSub, testTarget) ## res = 2.197225 (consistent with leaderboard)
 tmp2 <- evalMetric(all2Sub, testTarget) ## res = 25.53987
