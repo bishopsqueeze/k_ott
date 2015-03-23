@@ -60,6 +60,10 @@ train.nzv.save  <- nearZeroVar(train.feat, saveMetrics = TRUE)
 train.nzv       <- nearZeroVar(train.feat)
 
 ##------------------------------------------------------------------
+## Constuct additional feautres (feature engineering)
+##------------------------------------------------------------------
+
+##------------------------------------------------------------------
 ## compute class distances on raw values (then combine & normalize)
 ##------------------------------------------------------------------
 train.centroids     <- classDist(train.feat, train.target)
@@ -80,6 +84,15 @@ test.newDist.b2     <- predict(train.centroids.b2, test.feat.b2)
 comb.newDist.b2             <- rbind(train.newDist.b2, test.newDist.b2)
 comb.newDist.preProc.b2     <- preProcess(comb.newDist.b2, method=c("center", "scale"))
 comb.newDist.unif.feat.b2   <- predict(comb.newDist.preProc.b2, newdata=comb.newDist.b2)
+
+##------------------------------------------------------------------
+## compute additional feautres
+##------------------------------------------------------------------
+
+## sum of all feature counts
+train.cntSum        <- apply(train.feat, 1, sum)
+test.cntSum         <- apply(test.feat, 1, sum)
+
 
 
 ##------------------------------------------------------------------

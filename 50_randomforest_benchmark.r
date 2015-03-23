@@ -117,13 +117,13 @@ class           <- train.target
 #class.os.mat    <- expandTarget.cmp(class.os)
 
 fitControl <- trainControl( method = "cv",
-                            number = 3,
+                            number = 5,
                             classProbs = TRUE,
                             allowParallel = TRUE,
                             summaryFunction = logLoss)
 
 
-rfGrid  <- expand.grid(mtry = c(5, 10, 20))
+rfGrid  <- expand.grid(mtry = 2:10)
 
 
 set.seed(4321)
@@ -132,9 +132,9 @@ rfFit1 <- train(    x=train,
                     method = "rf",
                     tuneGrid=rfGrid,
                     trControl = fitControl,
-                    metric = "logloss",
+                    metric = "neglogloss",
                     ## rf params
-                    ntree=100,
+                    ntree=500,
                     importance=TRUE)
 
 
